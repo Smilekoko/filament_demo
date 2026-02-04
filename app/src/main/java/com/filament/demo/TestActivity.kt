@@ -8,11 +8,13 @@ import android.view.WindowManager
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.filament.demo.databinding.ActivityTestBinding
+import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.LightManager
 import com.google.android.filament.Renderer
 import com.google.android.filament.Skybox
 import com.google.android.filament.View
+import com.google.android.filament.android.UiHelper
 import com.google.android.filament.utils.AutomationEngine
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
@@ -45,17 +47,28 @@ class TestActivity : AppCompatActivity() {
         binding = ActivityTestBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        window.setBackgroundDrawable(null)
         // 保持屏幕常亮
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         surfaceView = binding.surfaceView
+        window.setBackgroundDrawable(null)
 
         surfaceView.holder.setFormat(PixelFormat.TRANSLUCENT)
         surfaceView.alpha = 1f
 
+        surfaceView.setZOrderOnTop(true)  // 如果需要透明覆盖
+        surfaceView.holder.setFormat(PixelFormat.TRANSPARENT)
+
+
         binding.surfaceView.post {
 
-            modelViewer = ModelViewer(surfaceView)
+            modelViewer = ModelViewer(
+                surfaceView, Engine.create(),
+                UiHelper().apply {
+                    isOpaque = false
+                }, null
+            )
 
             // 填充viewerContent对象，供自动化引擎使用
             viewerContent.view = modelViewer.view
@@ -76,7 +89,7 @@ class TestActivity : AppCompatActivity() {
             modelViewer.view.blendMode = View.BlendMode.TRANSLUCENT
 
             // 设置一个浅蓝色天空盒（也会作为视觉背景）
-            setupSkybox()
+//            setupSkybox()
 
 
             val directional = EntityManager.get().create()
@@ -185,10 +198,15 @@ class TestActivity : AppCompatActivity() {
      * 创建并设置一个浅蓝色（LightSkyBlue）的 Skybox
      */
     private fun setupSkybox() {
-        val r = 0f / 255f
-        val g = 206f / 255f
-        val b = 250f / 255f
-        val a = 1.0f
+//        val r = 0f / 255f
+//        val g = 206f / 255f
+//        val b = 250f / 255f
+//        val a = 1.0f
+
+        val r = 0f
+        val g = 0f
+        val b = 0f
+        val a = 1f
 
         skybox = Skybox.Builder()
             .color(floatArrayOf(r, g, b, a))
