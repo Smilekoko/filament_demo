@@ -14,18 +14,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Filament_demo">
         <activity
-            android:name=".TestActivity2"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:exported="true">
-<!--            <intent-filter>-->
-<!--                <action android:name="android.intent.action.MAIN" />-->
-
-<!--                <category android:name="android.intent.category.LAUNCHER" />-->
-<!--            </intent-filter>-->
-        </activity>
+            android:name=".OfficeActivity"
+            android:exported="false" />
         <activity
-            android:name=".TestActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:name=".StartActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -34,18 +26,18 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".TestActivity2"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:exported="true"></activity>
+        <activity
+            android:name=".TestActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:exported="true"></activity>
+        <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:exported="true"
-            android:screenOrientation="fullSensor">
-
-            <!-- <intent-filter> -->
-            <!-- <action android:name="android.intent.action.MAIN" /> -->
-
-
-            <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
-            <!-- </intent-filter> -->
-        </activity>
+            android:screenOrientation="fullSensor"></activity>
     </application>
 
 </manifest>

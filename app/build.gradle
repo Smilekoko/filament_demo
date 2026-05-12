@@ -36,6 +36,7 @@ android {
 }
 
 dependencies {
+    implementation libs.androidx.activity.ktx
     implementation libs.androidx.core.ktx
     implementation libs.androidx.appcompat
     implementation libs.material
@@ -47,4 +48,8 @@ dependencies {
 
     implementation 'com.google.android.filament:filament-android:1.68.5'
     implementation 'com.google.android.filament:filament-utils-android:1.68.5'
+    implementation 'com.google.android.filament:gltfio-android:1.68.5'
+
+    //Glide
+    implementation(libs.glide)
 }
