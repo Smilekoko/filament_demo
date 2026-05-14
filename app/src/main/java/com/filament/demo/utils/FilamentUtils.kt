@@ -35,6 +35,7 @@ class FilamentUtils(
 
     private val viewerContent = AutomationEngine.ViewerContent() // 查看器内容容器
 
+    private var loadedModelEntity: Int = 0 // 用于存储模型的根实体
 
     fun initModelViewer() {
         // 初始化模型查看器
@@ -98,6 +99,17 @@ class FilamentUtils(
         modelViewer
         //设置光照
         setFollowLight()
+        //获取模型句柄
+        val asset = modelViewer.asset
+        if (asset != null) {
+            // 2. 获取资产的根实体。对于单个根节点的模型，根实体就是模型本身。
+            //    asset.getRoot() 返回根实体的索引。
+            loadedModelEntity = asset.entities.find { it != followLightEntity } ?: 0
+        } else {
+            // 处理 asset 为 null 的情况，例如加载失败或模型文件为空
+            loadedModelEntity = 0
+        }
+        println(loadedModelEntity)
     }
 
     private var followLightEntity: Int = 0
