@@ -8,7 +8,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.filament.demo.databinding.ActivityOfficeBinding
 import com.filament.demo.utils.FilamentUtils
-import com.filament.demo.utils.GlideDownloadUtils
+import com.filament.demo.GlideDownloadUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

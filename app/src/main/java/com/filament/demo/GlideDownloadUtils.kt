@@ -1,4 +1,4 @@
-package com.filament.demo.utils
+package com.filament.demo
 
 import android.content.Context
 import com.bumptech.glide.Glide

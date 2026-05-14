@@ -7,19 +7,14 @@ import android.view.Choreographer
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.SurfaceView
-import com.google.android.filament.Camera
 import com.google.android.filament.EntityManager
 import com.google.android.filament.LightManager
 import com.google.android.filament.Renderer
 import com.google.android.filament.View
 import com.google.android.filament.utils.AutomationEngine
-import com.google.android.filament.utils.Float3
-import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
 import java.nio.ByteBuffer
-import kotlin.math.cos
-import kotlin.math.sin
 
 class FilamentUtils(
     val context: Context,
@@ -40,7 +35,6 @@ class FilamentUtils(
 
     private val viewerContent = AutomationEngine.ViewerContent() // 查看器内容容器
 
-    private val centerPoint = Float3(0.0f, 0.0f, -4.0f)
 
     fun initModelViewer() {
         // 初始化模型查看器
@@ -73,7 +67,6 @@ class FilamentUtils(
         val singleTapDetector = GestureDetector(context, singleTapListener)
         // 设置触摸事件监听器
         surfaceView.setOnTouchListener { _, event ->
-            modelViewer.onTouchEvent(event)                 // 传递触摸事件给模型查看器
             doubleTapDetector.onTouchEvent(event)           // 检测双击
             singleTapDetector.onTouchEvent(event)           // 检测单击
             true
@@ -101,7 +94,8 @@ class FilamentUtils(
 
     fun loadModelGlb(byteArray: ByteArray) {
         modelViewer.loadModelGlb(ByteBuffer.wrap(byteArray))
-        modelViewer.transformToUnitCube(centerPoint)
+        modelViewer.transformToUnitCube()
+        modelViewer
         //设置光照
         setFollowLight()
     }
@@ -147,7 +141,6 @@ class FilamentUtils(
                 //todo
             }
             updateLightFollowCamera()//光照跟随相机
-
 
             modelViewer.render(frameTimeNanos)// 渲染当前帧
         }
