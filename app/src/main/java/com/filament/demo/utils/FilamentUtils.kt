@@ -35,8 +35,6 @@ class FilamentUtils(
 
     private val viewerContent = AutomationEngine.ViewerContent() // 查看器内容容器
 
-    private var loadedModelEntity: Int = 0 // 用于存储模型的根实体
-
     fun initModelViewer() {
         // 初始化模型查看器
         modelViewer = ModelViewer(surfaceView)
@@ -64,12 +62,17 @@ class FilamentUtils(
     fun setSurfaceViewEvent() {
         val doubleTapListener = DoubleTapListener()
         val singleTapListener = SingleTapListener()
+        val scrollListener = ScrollRotationListener()  // 新增滑动监听器
+
         val doubleTapDetector = GestureDetector(context, doubleTapListener)
         val singleTapDetector = GestureDetector(context, singleTapListener)
+        val scrollDetector = GestureDetector(context, scrollListener)  // 用于检测滑动
+
         // 设置触摸事件监听器
         surfaceView.setOnTouchListener { _, event ->
             doubleTapDetector.onTouchEvent(event)           // 检测双击
             singleTapDetector.onTouchEvent(event)           // 检测单击
+            scrollDetector.onTouchEvent(event)
             true
         }
     }
@@ -99,17 +102,6 @@ class FilamentUtils(
         modelViewer
         //设置光照
         setFollowLight()
-        //获取模型句柄
-        val asset = modelViewer.asset
-        if (asset != null) {
-            // 2. 获取资产的根实体。对于单个根节点的模型，根实体就是模型本身。
-            //    asset.getRoot() 返回根实体的索引。
-            loadedModelEntity = asset.entities.find { it != followLightEntity } ?: 0
-        } else {
-            // 处理 asset 为 null 的情况，例如加载失败或模型文件为空
-            loadedModelEntity = 0
-        }
-        println(loadedModelEntity)
     }
 
     private var followLightEntity: Int = 0
@@ -164,6 +156,50 @@ class FilamentUtils(
 
     fun stopRendering() {
         choreographer.removeFrameCallback(frameScheduler)   // 移除帧回调
+    }
+
+
+    // 模型当前的旋转角度（绕 X 轴和 Y 轴，单位：弧度）
+    private var modelRotationX: Float = 0f
+    private var modelRotationY: Float = 0f
+
+    /**
+     * 滑动旋转模型监听器
+     */
+    inner class ScrollRotationListener : GestureDetector.SimpleOnGestureListener() {
+        private val ROTATION_SENSITIVITY = 0.005f   // 灵敏度，可调整
+
+        override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+
+            modelRotationX += distanceY * ROTATION_SENSITIVITY * 0.01f
+
+            updateModelRotation()
+            return true
+        }
+    }
+
+    /**
+     * 更新模型的旋转矩阵
+     */
+    private fun updateModelRotation() {
+        val transformManager = modelViewer.engine.transformManager
+        val transformInstance = transformManager.getInstance(modelViewer.asset?.root ?: 0)
+        if (transformInstance == 0) return
+
+        // 获取当前变换矩阵（可能是 modelViewer.transformToUnitCube() 设置的）
+        val currentMatrix = FloatArray(16)
+        transformManager.getTransform(transformInstance, currentMatrix)
+
+        // 构建旋转矩阵
+        val rotMatrix = FloatArray(16)
+        android.opengl.Matrix.setIdentityM(rotMatrix, 0)
+        android.opengl.Matrix.rotateM(rotMatrix, 0, Math.toDegrees(modelRotationY.toDouble()).toFloat(), 0f, 1f, 0f)
+        android.opengl.Matrix.rotateM(rotMatrix, 0, Math.toDegrees(modelRotationX.toDouble()).toFloat(), 1f, 0f, 0f)
+
+        // 组合：newTransform = currentMatrix * rotMatrix
+        val newMatrix = FloatArray(16)
+        android.opengl.Matrix.multiplyMM(newMatrix, 0, currentMatrix, 0, rotMatrix, 0)
+        transformManager.setTransform(transformInstance, newMatrix)
     }
 
 }
