@@ -7,14 +7,19 @@ import android.view.Choreographer
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.SurfaceView
+import com.google.android.filament.Camera
 import com.google.android.filament.EntityManager
 import com.google.android.filament.LightManager
 import com.google.android.filament.Renderer
 import com.google.android.filament.View
+import com.google.android.filament.utils.AutomationEngine
 import com.google.android.filament.utils.Float3
+import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
 import java.nio.ByteBuffer
+import kotlin.math.cos
+import kotlin.math.sin
 
 class FilamentUtils(
     val context: Context,
@@ -28,11 +33,25 @@ class FilamentUtils(
     private val choreographer = Choreographer.getInstance()
     private val frameScheduler = FrameCallback()//注册调动器
     private lateinit var modelViewer: ModelViewer
-    var autoRotation: Boolean = true
+
+    //这个为啥不直接更改相机实现自旋转,因为官方的渲染器会强行读取手势管理器（Manipulator）的位置，并把相机的矩阵再次重写覆盖掉。
+    //Manipulator又没有方便旋转的方法
+    var modelAutoRotate: Boolean = true//模型是否矩阵变换实现自旋转
+
+    private val viewerContent = AutomationEngine.ViewerContent() // 查看器内容容器
+
+    private val centerPoint = Float3(0.0f, 0.0f, -4.0f)
 
     fun initModelViewer() {
         // 初始化模型查看器
         modelViewer = ModelViewer(surfaceView)
+        // 填充viewerContent对象，供自动化引擎使用
+        viewerContent.view = modelViewer.view
+        viewerContent.sunlight = modelViewer.light
+        viewerContent.lightManager = modelViewer.engine.lightManager
+        viewerContent.scene = modelViewer.scene
+        viewerContent.renderer = modelViewer.renderer
+
         //设置背景透明
         modelViewer.renderer.let { renderer ->
             renderer.clearOptions = Renderer.ClearOptions().apply {
@@ -82,7 +101,7 @@ class FilamentUtils(
 
     fun loadModelGlb(byteArray: ByteArray) {
         modelViewer.loadModelGlb(ByteBuffer.wrap(byteArray))
-        modelViewer.transformToUnitCube(Float3(0.0f, 0.0f, -4.0f))
+        modelViewer.transformToUnitCube(centerPoint)
         //设置光照
         setFollowLight()
     }
@@ -120,10 +139,17 @@ class FilamentUtils(
      * 帧回调类，处理每帧的渲染和更新逻辑
      */
     inner class FrameCallback : Choreographer.FrameCallback {
+
         override fun doFrame(frameTimeNanos: Long) {
             choreographer.postFrameCallback(this)// 注册下一帧回调
-            modelViewer.render(frameTimeNanos)// 渲染当前帧
+
+            if (modelAutoRotate) {
+                //todo
+            }
             updateLightFollowCamera()//光照跟随相机
+
+
+            modelViewer.render(frameTimeNanos)// 渲染当前帧
         }
     }
 
@@ -131,7 +157,8 @@ class FilamentUtils(
         choreographer.postFrameCallback(frameScheduler)     // 注册帧回调
     }
 
-    fun stopRendering(){
+    fun stopRendering() {
         choreographer.removeFrameCallback(frameScheduler)   // 移除帧回调
     }
+
 }

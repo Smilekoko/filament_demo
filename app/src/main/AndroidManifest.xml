@@ -26,18 +26,10 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".TestActivity2"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:exported="true"></activity>
-        <activity
-            android:name=".TestActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:exported="true"></activity>
-        <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:exported="true"
-            android:screenOrientation="fullSensor"></activity>
+            android:screenOrientation="fullSensor" />
     </application>
 
 </manifest>
