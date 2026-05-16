@@ -17,7 +17,6 @@ import com.google.android.filament.utils.AutomationEngine
 import com.google.android.filament.utils.Float3
 import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.ModelViewer
-import com.google.android.filament.utils.ModelViewer.Companion.kDefaultObjectPosition
 import com.google.android.filament.utils.Utils
 import java.nio.ByteBuffer
 
