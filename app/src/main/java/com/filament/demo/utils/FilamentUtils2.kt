@@ -175,8 +175,6 @@ class FilamentUtils2(
     }
 
     /**
-     * 更新模型的旋转矩阵（绕 X 轴和 Y 轴）
-     * 注意：modelRotationX 和 modelRotationY 现在存储的是度数，直接传给 rotateM
      */
     private fun updateModelRotation() {
 
