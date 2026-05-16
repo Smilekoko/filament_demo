@@ -157,28 +157,73 @@ class FilamentUtils2(
     }
 
     /**
-     * 滑动
+     * 滑动旋转监听器
      */
     inner class ScrollRotationListener : GestureDetector.SimpleOnGestureListener() {
+        // 旋转角度状态（累积值）
+        private var userRotationAngle = 0f   // 水平旋转角度（绕Y轴）
+        private var userPitchAngle = 0f      // 垂直旋转角度（绕X轴）
 
         override fun onDown(e: MotionEvent): Boolean {
             return true
         }
 
         override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+            // 水平旋转：左右滑动
+            val deltaAngleY = -distanceX / surfaceView.width * 360f * 0.5f
+            userRotationAngle = (userRotationAngle + deltaAngleY) % 360f
+            if (userRotationAngle < 0) userRotationAngle += 360f
 
+            // 垂直旋转：上下滑动
+            val deltaAngleX = -distanceY / surfaceView.height * 360f * 0.5f
+            userPitchAngle = (userPitchAngle + deltaAngleX) % 360f
+            if (userPitchAngle < 0) userPitchAngle += 360f
 
-            // 更新模型变换矩阵
             updateModelRotation()
             return true
         }
+
+        /**
+         * 更新模型旋转矩阵（只改旋转，位置保持不变）
+         */
+        private fun updateModelRotation() {
+            modelViewer.asset?.root?.let { root ->
+                val tm = modelViewer.engine.transformManager
+                val instance = tm.getInstance(root)
+                if (instance == 0) return
+
+                // 1. 获取当前矩阵，提取位置
+                val currentMatrix = FloatArray(16)
+                tm.getTransform(instance, currentMatrix)
+                val posX = currentMatrix[12]
+                val posY = currentMatrix[13]
+                val posZ = currentMatrix[14]
+
+                // 2. 构建新旋转矩阵（单位矩阵 + 旋转）
+                val newMatrix = FloatArray(16)
+                android.opengl.Matrix.setIdentityM(newMatrix, 0)
+
+                // 先X轴俯仰，再Y轴水平（与FilamentUtils一致）
+                val rotX = FloatArray(16)
+                val rotY = FloatArray(16)
+                val rotComposite = FloatArray(16)
+                android.opengl.Matrix.setRotateM(rotX, 0, userPitchAngle, 1f, 0f, 0f)
+                android.opengl.Matrix.setRotateM(rotY, 0, userRotationAngle, 0f, 1f, 0f)
+                android.opengl.Matrix.multiplyMM(rotComposite, 0, rotY, 0, rotX, 0)
+
+                // 应用旋转到新矩阵
+                android.opengl.Matrix.multiplyMM(newMatrix, 0, rotComposite, 0, newMatrix, 0)
+
+                // 3. 把原位置写回去（只保留位置，旋转被替换）
+                newMatrix[12] = posX
+                newMatrix[13] = posY
+                newMatrix[14] = posZ
+
+                tm.setTransform(instance, newMatrix)
+            }
+        }
     }
 
-    /**
-     */
-    private fun updateModelRotation() {
-
-    }
 
     /**
      * 向上旋转90°
