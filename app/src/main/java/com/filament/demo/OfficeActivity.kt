@@ -7,15 +7,14 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.filament.demo.databinding.ActivityOfficeBinding
-import com.filament.demo.utils.FilamentUtils
-import com.filament.demo.GlideDownloadUtils
+import com.filament.demo.utils.FilamentUtils2
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class OfficeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityOfficeBinding
-    private var filamentUtils: FilamentUtils? = null
+    private var filamentUtils: FilamentUtils2? = null
     private var useLocal: Boolean=true
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,7 +26,7 @@ class OfficeActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        filamentUtils = FilamentUtils(this, binding.surfaceView)
+        filamentUtils = FilamentUtils2(this, binding.surfaceView)
         filamentUtils?.initModelViewer()
 
         if (useLocal){

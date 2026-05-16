@@ -16,7 +16,7 @@ import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
 import java.nio.ByteBuffer
 
-class FilamentUtils(
+class FilamentUtils2(
     val context: Context,
     val surfaceView: SurfaceView
 ) {
@@ -62,11 +62,11 @@ class FilamentUtils(
     fun setSurfaceViewEvent() {
         val doubleTapListener = DoubleTapListener()
         val singleTapListener = SingleTapListener()
-        val scrollListener = ScrollRotationListener()  // 新增滑动监听器
+        val scrollListener = ScrollRotationListener()  // 滑动旋转监听器
 
         val doubleTapDetector = GestureDetector(context, doubleTapListener)
         val singleTapDetector = GestureDetector(context, singleTapListener)
-        val scrollDetector = GestureDetector(context, scrollListener)  // 用于检测滑动
+        val scrollDetector = GestureDetector(context, scrollListener)
 
         // 设置触摸事件监听器
         surfaceView.setOnTouchListener { _, event ->
@@ -80,8 +80,10 @@ class FilamentUtils(
     /**
      * 双击监听器
      */
-    class DoubleTapListener : GestureDetector.SimpleOnGestureListener() {
+    inner class DoubleTapListener : GestureDetector.SimpleOnGestureListener() {
         override fun onDoubleTap(e: MotionEvent): Boolean {
+//            testUp90()
+//            testDown90()
             return super.onDoubleTap(e)
         }
     }
@@ -140,10 +142,6 @@ class FilamentUtils(
 
         override fun doFrame(frameTimeNanos: Long) {
             choreographer.postFrameCallback(this)// 注册下一帧回调
-
-            if (modelAutoRotate) {
-                //todo
-            }
             updateLightFollowCamera()//光照跟随相机
 
             modelViewer.render(frameTimeNanos)// 渲染当前帧
@@ -158,47 +156,91 @@ class FilamentUtils(
         choreographer.removeFrameCallback(frameScheduler)   // 移除帧回调
     }
 
-
-    // 模型当前的旋转角度（绕 X 轴和 Y 轴，单位：弧度）
-    private var modelRotationX: Float = 0f
-    private var modelRotationY: Float = 0f
-
     /**
-     * 滑动旋转模型监听器
+     * 滑动
      */
     inner class ScrollRotationListener : GestureDetector.SimpleOnGestureListener() {
-        private val ROTATION_SENSITIVITY = 0.005f   // 灵敏度，可调整
+
+        override fun onDown(e: MotionEvent): Boolean {
+            return true
+        }
 
         override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
 
-            modelRotationX += distanceY * ROTATION_SENSITIVITY * 0.01f
 
+            // 更新模型变换矩阵
             updateModelRotation()
             return true
         }
     }
 
     /**
-     * 更新模型的旋转矩阵
+     * 更新模型的旋转矩阵（绕 X 轴和 Y 轴）
+     * 注意：modelRotationX 和 modelRotationY 现在存储的是度数，直接传给 rotateM
      */
     private fun updateModelRotation() {
+
+    }
+
+    /**
+     * 向上旋转90°
+     */
+    fun testUp90() {
         val transformManager = modelViewer.engine.transformManager
         val transformInstance = transformManager.getInstance(modelViewer.asset?.root ?: 0)
         if (transformInstance == 0) return
 
-        // 获取当前变换矩阵（可能是 modelViewer.transformToUnitCube() 设置的）
+        // 1. 获取当前变换矩阵
         val currentMatrix = FloatArray(16)
         transformManager.getTransform(transformInstance, currentMatrix)
 
-        // 构建旋转矩阵
+        // 2. 构建旋转矩阵（单位矩阵）
         val rotMatrix = FloatArray(16)
         android.opengl.Matrix.setIdentityM(rotMatrix, 0)
-        android.opengl.Matrix.rotateM(rotMatrix, 0, Math.toDegrees(modelRotationY.toDouble()).toFloat(), 0f, 1f, 0f)
-        android.opengl.Matrix.rotateM(rotMatrix, 0, Math.toDegrees(modelRotationX.toDouble()).toFloat(), 1f, 0f, 0f)
 
-        // 组合：newTransform = currentMatrix * rotMatrix
+        // 参数说明：
+        //   m      - 要操作的矩阵（float数组）
+        //   mOffset- 矩阵起始偏移（通常为0）
+        //   a      - 旋转角度（单位：度，不是弧度！）
+        //   x,y,z  - 旋转轴向量（绕X轴就是 1,0,0；绕Y轴就是 0,1,0；绕Z轴就是 0,0,1）
+        android.opengl.Matrix.rotateM(rotMatrix, 0, -90f, 1f, 0f, 0f)
+
+        // 4. 矩阵相乘：new = current × rot
         val newMatrix = FloatArray(16)
         android.opengl.Matrix.multiplyMM(newMatrix, 0, currentMatrix, 0, rotMatrix, 0)
+
+        // 5. 应用新矩阵
+        transformManager.setTransform(transformInstance, newMatrix)
+    }
+
+    /**
+     * 向下旋转90°
+     */
+    fun testDown90() {
+        val transformManager = modelViewer.engine.transformManager
+        val transformInstance = transformManager.getInstance(modelViewer.asset?.root ?: 0)
+        if (transformInstance == 0) return
+
+        // 1. 获取当前变换矩阵
+        val currentMatrix = FloatArray(16)
+        transformManager.getTransform(transformInstance, currentMatrix)
+
+        // 2. 构建旋转矩阵（单位矩阵）
+        val rotMatrix = FloatArray(16)
+        android.opengl.Matrix.setIdentityM(rotMatrix, 0)
+
+        // 参数说明：
+        //   m      - 要操作的矩阵（float数组）
+        //   mOffset- 矩阵起始偏移（通常为0）
+        //   a      - 旋转角度（单位：度，不是弧度！）
+        //   x,y,z  - 旋转轴向量（绕X轴就是 1,0,0；绕Y轴就是 0,1,0；绕Z轴就是 0,0,1）
+        android.opengl.Matrix.rotateM(rotMatrix, 0, 30f, 1f, 0f, 0f)
+
+        // 4. 矩阵相乘：new = current × rot
+        val newMatrix = FloatArray(16)
+        android.opengl.Matrix.multiplyMM(newMatrix, 0, currentMatrix, 0, rotMatrix, 0)
+
+        // 5. 应用新矩阵
         transformManager.setTransform(transformInstance, newMatrix)
     }
 
