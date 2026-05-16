@@ -41,7 +41,7 @@ class FilamentUtils2(
     private lateinit var cameraManipulator: Manipulator
 
     fun initModelViewer() {
-        //这个是默认的ModelViewer构造,因为外部可能需要ModelViewer的manipulator,所以复制了一封
+        //这个是默认的ModelViewer构造,因为外部可能需要ModelViewer的manipulator,所以复制了一份
         val targetPosition = Float3(0.0f, 0.0f, -4.0f)
         cameraManipulator = Manipulator.Builder()
             .targetPosition(targetPosition.x, targetPosition.y, targetPosition.z)
