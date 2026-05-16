@@ -6,6 +6,7 @@ import android.graphics.PixelFormat
 import android.view.Choreographer
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.SurfaceView
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
@@ -80,10 +81,13 @@ class FilamentUtils2(
         val doubleTapListener = DoubleTapListener()
         val singleTapListener = SingleTapListener()
         val scrollListener = ScrollRotationListener()  // 滑动旋转监听器
+        val pinchListener = PinchScaleListener()
+
 
         val doubleTapDetector = GestureDetector(context, doubleTapListener)
         val singleTapDetector = GestureDetector(context, singleTapListener)
         val scrollDetector = GestureDetector(context, scrollListener)
+        val scaleDetector = ScaleGestureDetector(context, pinchListener)
 
 //        已知摄像机的参数是
 //        cameraManipulator.getLookAt(eyePos, target, upward)
@@ -94,6 +98,7 @@ class FilamentUtils2(
 
         // 设置触摸事件监听器
         surfaceView.setOnTouchListener { _, event ->
+            scaleDetector.onTouchEvent(event)
             doubleTapDetector.onTouchEvent(event)           // 检测双击
             singleTapDetector.onTouchEvent(event)           // 检测单击
             scrollDetector.onTouchEvent(event)              // 单指模型滑动
@@ -311,4 +316,88 @@ class FilamentUtils2(
         transformManager.setTransform(transformInstance, newMatrix)
     }
 
+
+    /**
+     * 双指缩放监听器 - 模型沿"模型→摄像机"向量方向移动
+     */
+    inner class PinchScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+
+        // 灵敏度系数，可根据手感调整
+        private val scaleSensitivity = 0.8f
+
+        // 记录上一次缩放因子
+        private var lastScaleFactor = 1.0f
+
+        override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+            lastScaleFactor = 1.0f
+            return true
+        }
+
+        override fun onScale(detector: ScaleGestureDetector): Boolean {
+            val scaleFactor = detector.scaleFactor
+
+            // 计算增量：双指张开(scale>1) → 拉近模型；捏合(scale<<1) → 拉远模型
+            // 这里用对数方式计算更平滑：ln(scaleFactor) 正数表示张开，负数表示捏合
+            val delta = kotlin.math.ln(scaleFactor) * scaleSensitivity
+
+            moveModelTowardCamera(delta)
+
+            lastScaleFactor = scaleFactor
+            return true
+        }
+
+        override fun onScaleEnd(detector: ScaleGestureDetector) {
+            lastScaleFactor = 1.0f
+        }
+
+        /**
+         * 沿"模型→摄像机"方向移动模型
+         * @param delta 移动量，正值向摄像机靠近，负值远离
+         */
+        private fun moveModelTowardCamera(delta: Float) {
+            modelViewer.asset?.root?.let { root ->
+                val tm = modelViewer.engine.transformManager
+                val instance = tm.getInstance(root)
+                if (instance == 0) return
+
+                // 1. 获取模型当前世界位置
+                val modelMatrix = FloatArray(16)
+                tm.getTransform(instance, modelMatrix)
+                val modelPos = floatArrayOf(modelMatrix[12], modelMatrix[13], modelMatrix[14])
+
+                // 2. 从 Manipulator 获取摄像机位置
+                val eye = FloatArray(3)
+                val target = FloatArray(3)
+                val upward = FloatArray(3)
+                cameraManipulator.getLookAt(eye, target, upward)
+
+                // 3. 计算"模型→摄像机"的方向向量
+                val dirX = eye[0] - modelPos[0]
+                val dirY = eye[1] - modelPos[1]
+                val dirZ = eye[2] - modelPos[2]
+
+                // 4. 归一化方向向量
+                val length = kotlin.math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ)
+                if (length < 0.0001f) return // 防止除零或已经重合
+
+                val nx = dirX / length
+                val ny = dirY / length
+                val nz = dirZ / length
+
+                // 5. 计算位移量（沿方向向量移动）
+                // delta > 0: 向摄像机靠近；delta < 0: 远离摄像机
+                val moveDistance = delta * length
+                val offsetX = nx * moveDistance
+                val offsetY = ny * moveDistance
+                val offsetZ = nz * moveDistance
+
+                // 6. 应用新位置（保持旋转不变，只改位移）
+                modelMatrix[12] = modelPos[0] + offsetX
+                modelMatrix[13] = modelPos[1] + offsetY
+                modelMatrix[14] = modelPos[2] + offsetZ
+
+                tm.setTransform(instance, modelMatrix)
+            }
+        }
+    }
 }
