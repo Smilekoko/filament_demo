@@ -68,6 +68,13 @@ class FilamentUtils2(
         val singleTapDetector = GestureDetector(context, singleTapListener)
         val scrollDetector = GestureDetector(context, scrollListener)
 
+//        已知摄像机的参数是
+//        cameraManipulator.getLookAt(eyePos, target, upward)
+//        camera.lookAt(
+//            eyePos[0], eyePos[1], eyePos[2],//[ 0.0, 0.0, 1.0 ]
+//            target[0], target[1], target[2],//[ 0.0, 0.0, -4.0 ]
+//            upward[0], upward[1], upward[2])//[ 0.0, 1.0, 0.0 ]
+
         // 设置触摸事件监听器
         surfaceView.setOnTouchListener { _, event ->
             doubleTapDetector.onTouchEvent(event)           // 检测双击
