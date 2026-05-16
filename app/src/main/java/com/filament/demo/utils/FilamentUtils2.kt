@@ -7,12 +7,17 @@ import android.view.Choreographer
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.SurfaceView
+import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.LightManager
 import com.google.android.filament.Renderer
 import com.google.android.filament.View
+import com.google.android.filament.android.UiHelper
 import com.google.android.filament.utils.AutomationEngine
+import com.google.android.filament.utils.Float3
+import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.ModelViewer
+import com.google.android.filament.utils.ModelViewer.Companion.kDefaultObjectPosition
 import com.google.android.filament.utils.Utils
 import java.nio.ByteBuffer
 
@@ -34,10 +39,23 @@ class FilamentUtils2(
     var modelAutoRotate: Boolean = true//模型是否矩阵变换实现自旋转
 
     private val viewerContent = AutomationEngine.ViewerContent() // 查看器内容容器
+    private lateinit var cameraManipulator: Manipulator
 
     fun initModelViewer() {
+        //这个是默认的ModelViewer构造,因为外部可能需要ModelViewer的manipulator,所以复制了一封
+        val targetPosition = Float3(0.0f, 0.0f, -4.0f)
+        cameraManipulator = Manipulator.Builder()
+            .targetPosition(targetPosition.x, targetPosition.y, targetPosition.z)
+            .viewport(surfaceView.width, surfaceView.height)
+            .build(Manipulator.Mode.ORBIT)
         // 初始化模型查看器
-        modelViewer = ModelViewer(surfaceView)
+        modelViewer = ModelViewer(
+            surfaceView,
+            engine = Engine.create(),
+            uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
+            manipulator = cameraManipulator
+        )
+
         // 填充viewerContent对象，供自动化引擎使用
         viewerContent.view = modelViewer.view
         viewerContent.sunlight = modelViewer.light
