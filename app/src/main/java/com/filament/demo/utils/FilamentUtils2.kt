@@ -35,9 +35,6 @@ class FilamentUtils2(
     private val frameScheduler = FrameCallback()//注册调动器
     private lateinit var modelViewer: ModelViewer
 
-    //这个为啥不直接更改相机实现自旋转,因为官方的渲染器会强行读取手势管理器（Manipulator）的位置，并把相机的矩阵再次重写覆盖掉。
-    //Manipulator又没有方便旋转的方法
-    var modelAutoRotate: Boolean = true//模型是否矩阵变换实现自旋转
 
     private val viewerContent = AutomationEngine.ViewerContent() // 查看器内容容器
     private lateinit var cameraManipulator: Manipulator
@@ -457,6 +454,9 @@ class FilamentUtils2(
     // 自动旋转相关状态
     private var autoRotateAngle = 0f          // 当前累积的自动旋转角度
     private var autoRotateSpeed = 30f         // 旋转速度：度/秒，可调整
+
+    //这个为啥不直接更改相机实现自旋转,因为官方的渲染器会强行读取手势管理器（Manipulator）的位置，并把相机的矩阵再次重写覆盖掉。
+    //Manipulator又没有方便旋转的方法
     var isAutoRotating = false                // 是否启用自动旋转（外部可控制开关）
 
 
