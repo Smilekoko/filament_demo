@@ -168,19 +168,6 @@ class FilamentUtils2(
         }
     }
 
-    /**
-     * 帧回调类，处理每帧的渲染和更新逻辑
-     */
-    inner class FrameCallback : Choreographer.FrameCallback {
-
-        override fun doFrame(frameTimeNanos: Long) {
-            choreographer.postFrameCallback(this)// 注册下一帧回调
-            updateLightFollowCamera()//光照跟随相机
-
-            modelViewer.render(frameTimeNanos)// 渲染当前帧
-        }
-    }
-
     fun startRendering() {
         choreographer.postFrameCallback(frameScheduler)     // 注册帧回调
     }
@@ -454,6 +441,130 @@ class FilamentUtils2(
             modelMatrix[14] = modelPos[2] + nz * baseDistance
 
             tm.setTransform(instance, modelMatrix)
+        }
+    }
+
+
+    // ========== 添加在类的属性声明区域（cameraManipulator 声明附近）==========
+
+    // 自动旋转相关状态
+    private var autoRotateAngle = 0f          // 当前累积的自动旋转角度
+    private var autoRotateSpeed = 30f         // 旋转速度：度/秒，可调整
+    var isAutoRotating = false                // 是否启用自动旋转（外部可控制开关）
+
+
+    // 帧回调类，处理每帧的渲染和更新逻辑
+    inner class FrameCallback : Choreographer.FrameCallback {
+        // 记录上一帧时间，用于计算 dt
+        private var lastFrameTimeNanos = 0L
+
+        override fun doFrame(frameTimeNanos: Long) {
+            choreographer.postFrameCallback(this)// 注册下一帧回调
+
+            // 计算时间差（秒）
+            val dt = if (lastFrameTimeNanos == 0L) 0f else {
+                ((frameTimeNanos - lastFrameTimeNanos) / 1_000_000_000f).coerceAtMost(0.1f)
+            }
+            lastFrameTimeNanos = frameTimeNanos
+
+            // 执行自动旋转
+            if (isAutoRotating) {
+                updateAutoRotation(dt)
+            }
+
+            updateLightFollowCamera()//光照跟随相机
+            modelViewer.render(frameTimeNanos)// 渲染当前帧
+        }
+    }
+
+
+// ========== 添加在类的末尾（PinchScaleListener 和 initModelPosition 之后）==========
+
+    /**
+     * 设置自动旋转速度
+     * @param degreesPerSecond 每秒旋转角度，正值逆时针，负值顺时针
+     */
+    fun setAutoRotateSpeed(degreesPerSecond: Float) {
+        autoRotateSpeed = degreesPerSecond
+    }
+
+    /**
+     * 开启/关闭自动旋转
+     */
+    fun setAutoRotate(enabled: Boolean) {
+        isAutoRotating = enabled
+    }
+
+    /**
+     * 更新模型的自动旋转（绕 Y 轴，保持位置和大小不变）
+     * @param dt 时间增量（秒）
+     */
+    private fun updateAutoRotation(dt: Float) {
+        modelViewer.asset?.root?.let { root ->
+            val tm = modelViewer.engine.transformManager
+            val instance = tm.getInstance(root)
+            if (instance == 0) return
+
+            // 1. 累加旋转角度
+            autoRotateAngle = (autoRotateAngle + autoRotateSpeed * dt) % 360f
+            if (autoRotateAngle < 0) autoRotateAngle += 360f
+
+            // 2. 获取当前矩阵，提取位置和缩放信息
+            val currentMatrix = FloatArray(16)
+            tm.getTransform(instance, currentMatrix)
+
+            val posX = currentMatrix[12]
+            val posY = currentMatrix[13]
+            val posZ = currentMatrix[14]
+
+            // 提取缩放：计算各轴的缩放长度
+            val scaleX = kotlin.math.sqrt(
+                currentMatrix[0] * currentMatrix[0] +
+                        currentMatrix[1] * currentMatrix[1] +
+                        currentMatrix[2] * currentMatrix[2]
+            )
+            val scaleY = kotlin.math.sqrt(
+                currentMatrix[4] * currentMatrix[4] +
+                        currentMatrix[5] * currentMatrix[5] +
+                        currentMatrix[6] * currentMatrix[6]
+            )
+            val scaleZ = kotlin.math.sqrt(
+                currentMatrix[8] * currentMatrix[8] +
+                        currentMatrix[9] * currentMatrix[9] +
+                        currentMatrix[10] * currentMatrix[10]
+            )
+
+            // 3. 构建新的旋转矩阵（绕 Y 轴）
+            val rotationMatrix = FloatArray(16)
+            android.opengl.Matrix.setIdentityM(rotationMatrix, 0)
+
+            val rad = Math.toRadians(autoRotateAngle.toDouble()).toFloat()
+            val cos = kotlin.math.cos(rad)
+            val sin = kotlin.math.sin(rad)
+
+            // 手动构建绕 Y 轴的旋转矩阵
+            rotationMatrix[0] = cos * scaleX
+            rotationMatrix[2] = sin * scaleZ
+            rotationMatrix[4] = 0f
+            rotationMatrix[5] = scaleY
+            rotationMatrix[6] = 0f
+            rotationMatrix[8] = -sin * scaleX
+            rotationMatrix[10] = cos * scaleZ
+
+            // 保持其他元素为单位矩阵的默认值
+            rotationMatrix[1] = 0f
+            rotationMatrix[3] = 0f
+            rotationMatrix[7] = 0f
+            rotationMatrix[9] = 0f
+            rotationMatrix[11] = 0f
+            rotationMatrix[15] = 1f
+
+            // 4. 把原位置写回去
+            rotationMatrix[12] = posX
+            rotationMatrix[13] = posY
+            rotationMatrix[14] = posZ
+
+            tm.setTransform(instance, rotationMatrix)
         }
     }
 }

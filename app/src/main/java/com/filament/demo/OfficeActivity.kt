@@ -39,6 +39,11 @@ class OfficeActivity : AppCompatActivity() {
                        filamentUtils?.loadModelGlb(bytes)
                        filamentUtils?.setSurfaceViewEvent()
                        filamentUtils?.startRendering()
+
+                       // 1. 开启自动旋转（默认 30度/秒，逆时针）
+                       filamentUtils?.setAutoRotate(true)
+                        // 2. 调整旋转速度（比如 60度/秒）
+                       filamentUtils?.setAutoRotateSpeed(60f)
                    }
                 }
             }
