@@ -101,10 +101,10 @@ class FilamentUtils2(
         surfaceView.setOnTouchListener { _, event ->
             // 优先处理双指平移（2个手指且不是缩放时）
             twoFingerPanListener.onTouchEvent(event)
-//            scaleDetector.onTouchEvent(event)
+            scaleDetector.onTouchEvent(event)
             doubleTapDetector.onTouchEvent(event)           // 检测双击
             singleTapDetector.onTouchEvent(event)           // 检测单击
-//            scrollDetector.onTouchEvent(event)              // 单指模型滑动
+            scrollDetector.onTouchEvent(event)              // 单指模型滑动
             true
         }
     }
