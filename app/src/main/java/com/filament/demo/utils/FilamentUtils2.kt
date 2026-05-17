@@ -105,7 +105,7 @@ class FilamentUtils2(
                         currentMode = GestureMode.NONE
                         if (isAutoRotating) {
                             setAutoRotate(false)
-                            scrollListener.userRotationAngle = -autoRotateAngle
+                            userRotationAngle = -autoRotateAngle
                         }
 
                         val (x0, y0) = getPointerCenter(event)
@@ -247,6 +247,7 @@ class FilamentUtils2(
     inner class DoubleTapListener : GestureDetector.SimpleOnGestureListener() {
         override fun onDoubleTap(e: MotionEvent): Boolean {
             Toast.makeText(surfaceView.context, "双击", Toast.LENGTH_SHORT).show()
+            resetModelTransform()
             return super.onDoubleTap(e)
         }
     }
@@ -300,9 +301,11 @@ class FilamentUtils2(
         choreographer.removeFrameCallback(frameScheduler)
     }
 
+    private var userPitchAngle = 0f
+    private var userRotationAngle = 0f
+
     inner class ScrollRotationListener : GestureDetector.SimpleOnGestureListener() {
-        var userRotationAngle = 0f
-        private var userPitchAngle = 0f
+
 
         override fun onDown(e: MotionEvent): Boolean = true
 
@@ -504,5 +507,39 @@ class FilamentUtils2(
             updateLightFollowCamera()
             modelViewer.render(frameTimeNanos)
         }
+    }
+
+    /**
+     * 恢复模型的初始状态：
+     * - 位置重置为 initModelPosition 时的位置（距离摄像机 1.5 倍标准距离）
+     * - 缩放重置为 transformToUnitCube 后的归一化大小
+     * - 旋转角度清零（模型朝向初始方向）
+     * - 停止自动旋转，重置自转角度累积
+     */
+    fun resetModelTransform() {
+        modelViewer.asset?.root?.let { root ->
+            val tm = modelViewer.engine.transformManager
+            val instance = tm.getInstance(root)
+            if (instance == 0) return
+
+            // 1. 重置变换矩阵为单位矩阵（清除所有旋转、缩放、位移）
+            val identity = FloatArray(16)
+            android.opengl.Matrix.setIdentityM(identity, 0)
+            tm.setTransform(instance, identity)
+        }
+
+        // 2. 重新归一化模型尺寸（确保模型大小为单位立方体）
+        modelViewer.transformToUnitCube()
+
+        // 3. 重新设置模型位置（距离摄像机 1.5 倍标准距离）
+        initModelPosition(distanceFactor = 1.5f)
+
+        // 4. 重置用户旋转角度累积
+        userRotationAngle = 0f
+        userPitchAngle = 0f
+
+        // 5. 重置自动旋转状态
+        autoRotateAngle = 0f
+        setAutoRotate(true)
     }
 }
