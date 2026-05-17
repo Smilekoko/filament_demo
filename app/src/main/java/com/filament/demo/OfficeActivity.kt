@@ -15,7 +15,7 @@ import kotlinx.coroutines.withContext
 class OfficeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityOfficeBinding
     private var filamentUtils: FilamentUtils2? = null
-    private var useLocal: Boolean=true
+    private var useLocal: Boolean = true
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -29,25 +29,25 @@ class OfficeActivity : AppCompatActivity() {
         filamentUtils = FilamentUtils2(this, binding.surfaceView)
         filamentUtils?.initModelViewer()
 
-        if (useLocal){
+        if (useLocal) {
             lifecycleScope.launch(Dispatchers.IO) {
-                var fileName= "models/helmet.glb"
-               assets.open(fileName).use { input ->
+                var fileName = "models/helmet.glb"
+                assets.open(fileName).use { input ->
                     val bytes = ByteArray(input.available())
                     input.read(bytes)
-                   withContext(Dispatchers.Main){
-                       filamentUtils?.loadModelGlb(bytes)
-                       filamentUtils?.setSurfaceViewEvent()
-                       filamentUtils?.startRendering()
+                    withContext(Dispatchers.Main) {
+                        filamentUtils?.loadModelGlb(bytes)
+                        filamentUtils?.setSurfaceViewEvent()
+                        filamentUtils?.startRendering()
 
-                       // 1. 开启自动旋转（默认 30度/秒，逆时针）
-//                       filamentUtils?.setAutoRotate(true)
+                        // 1. 开启自动旋转（默认 30度/秒，逆时针）
+                        filamentUtils?.setAutoRotate(true)
                         // 2. 调整旋转速度（比如 60度/秒）
-//                       filamentUtils?.setAutoRotateSpeed(-20f)
-                   }
+                        filamentUtils?.setAutoRotateSpeed(-20f)
+                    }
                 }
             }
-        }else{
+        } else {
             lifecycleScope.launch(Dispatchers.IO) {
                 val result = GlideDownloadUtils.downloadFileAsBytes(this@OfficeActivity, "")
                 if (result.isSuccess) {
