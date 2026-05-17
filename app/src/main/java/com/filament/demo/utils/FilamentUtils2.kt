@@ -9,6 +9,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.SurfaceView
+import android.widget.Toast
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.LightManager
@@ -116,6 +117,7 @@ class FilamentUtils2(
         override fun onDoubleTap(e: MotionEvent): Boolean {
 //            testUp90()
 //            testDown90()
+            Toast.makeText(surfaceView.context, "双击", Toast.LENGTH_SHORT).show()
             return super.onDoubleTap(e)
         }
     }
@@ -123,8 +125,9 @@ class FilamentUtils2(
     /**
      * 单击监听器
      */
-    class SingleTapListener : GestureDetector.SimpleOnGestureListener() {
+    inner class SingleTapListener : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapUp(event: MotionEvent): Boolean {
+            Toast.makeText(surfaceView.context, "单击", Toast.LENGTH_SHORT).show()
             return super.onSingleTapUp(event)
         }
     }
