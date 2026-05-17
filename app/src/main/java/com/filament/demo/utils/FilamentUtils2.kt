@@ -133,7 +133,8 @@ class FilamentUtils2(
     fun loadModelGlb(byteArray: ByteArray) {
         modelViewer.loadModelGlb(ByteBuffer.wrap(byteArray))
         modelViewer.transformToUnitCube()
-        modelViewer
+        // 初始化位置，让模型远离摄像机，默认距离
+        initModelPosition(distanceFactor = 1.5f)  // 1.5倍标准距离
         //设置光照
         setFollowLight()
     }
@@ -401,6 +402,58 @@ class FilamentUtils2(
 
                 tm.setTransform(instance, modelMatrix)
             }
+        }
+    }
+
+    /**
+     * 初始化模型位置，使其远离摄像机以达到合适的屏幕显示大小
+     * @param distanceFactor 距离系数，默认1.0表示标准距离，>1更远 <1更近
+     */
+    fun initModelPosition(distanceFactor: Float = 1.0f) {
+        modelViewer.asset?.root?.let { root ->
+            val tm = modelViewer.engine.transformManager
+            val instance = tm.getInstance(root)
+            if (instance == 0) return
+
+            // 1. 先执行 transformToUnitCube 后的标准归一化
+            modelViewer.transformToUnitCube()
+
+            // 2. 获取模型当前世界位置（此时应在原点或附近）
+            val modelMatrix = FloatArray(16)
+            tm.getTransform(instance, modelMatrix)
+            val modelPos = floatArrayOf(modelMatrix[12], modelMatrix[13], modelMatrix[14])
+
+            // 3. 从 Manipulator 获取摄像机位置
+            val eye = FloatArray(3)
+            val target = FloatArray(3)
+            val upward = FloatArray(3)
+            cameraManipulator.getLookAt(eye, target, upward)
+
+            // 4. 计算"摄像机→模型"的方向向量（远离摄像机的方向）
+            val dirX = modelPos[0] - eye[0]
+            val dirY = modelPos[1] - eye[1]
+            val dirZ = modelPos[2] - eye[2]
+
+            // 5. 归一化方向向量
+            val length = kotlin.math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ)
+            // 如果模型就在摄像机位置，默认向 -Z 方向远离
+            val (nx, ny, nz) = if (length < 0.0001f) {
+                Triple(0f, 0f, -1f)
+            } else {
+                Triple(dirX / length, dirY / length, dirZ / length)
+            }
+
+            // 6. 计算远离摄像机的距离
+            // 基础距离：根据模型大小和视口计算，这里使用经验值
+            // 也可以基于 cameraManipulator 的 viewport 和模型包围盒动态计算
+            val baseDistance = 3.0f * distanceFactor  // 默认远离3个单位，可根据模型调整
+
+            // 7. 应用新位置（保持旋转不变，只改位移）
+            modelMatrix[12] = modelPos[0] + nx * baseDistance
+            modelMatrix[13] = modelPos[1] + ny * baseDistance
+            modelMatrix[14] = modelPos[2] + nz * baseDistance
+
+            tm.setTransform(instance, modelMatrix)
         }
     }
 }
