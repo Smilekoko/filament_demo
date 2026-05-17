@@ -199,6 +199,10 @@ class FilamentUtils2(
             userPitchAngle = (userPitchAngle + deltaAngleX) % 360f
             if (userPitchAngle < 0) userPitchAngle += 360f
 
+            if (isAutoRotating) {
+                setAutoRotate(false)
+                userRotationAngle = -autoRotateAngle
+            }
             updateModelRotation()
             return true
         }
