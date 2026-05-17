@@ -200,7 +200,9 @@ class FilamentUtils2(
             if (userPitchAngle < 0) userPitchAngle += 360f
 
             if (isAutoRotating) {
+                //停止模型自旋转
                 setAutoRotate(false)
+                //读取自动旋转的角度,用于连续滑动
                 userRotationAngle = -autoRotateAngle
             }
             updateModelRotation()
@@ -325,6 +327,7 @@ class FilamentUtils2(
 
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
             lastScaleFactor = 1.0f
+            setAutoRotate(false)
             return true
         }
 
