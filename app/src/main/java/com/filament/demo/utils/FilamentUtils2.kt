@@ -21,6 +21,7 @@ import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
 import java.nio.ByteBuffer
+import kotlin.math.sqrt
 
 class FilamentUtils2(
     val context: Context,
@@ -82,7 +83,7 @@ class FilamentUtils2(
         val singleTapListener = SingleTapListener()
         val scrollListener = ScrollRotationListener()  // 滑动旋转监听器
         val pinchListener = PinchScaleListener()
-
+        val twoFingerPanListener = TwoFingerPanListener()  // 双指平移监听器
 
         val doubleTapDetector = GestureDetector(context, doubleTapListener)
         val singleTapDetector = GestureDetector(context, singleTapListener)
@@ -98,10 +99,12 @@ class FilamentUtils2(
 
         // 设置触摸事件监听器
         surfaceView.setOnTouchListener { _, event ->
-            scaleDetector.onTouchEvent(event)
+            // 优先处理双指平移（2个手指且不是缩放时）
+            twoFingerPanListener.onTouchEvent(event)
+//            scaleDetector.onTouchEvent(event)
             doubleTapDetector.onTouchEvent(event)           // 检测双击
             singleTapDetector.onTouchEvent(event)           // 检测单击
-            scrollDetector.onTouchEvent(event)              // 单指模型滑动
+//            scrollDetector.onTouchEvent(event)              // 单指模型滑动
             true
         }
     }
@@ -574,4 +577,141 @@ class FilamentUtils2(
             tm.setTransform(instance, rotationMatrix)
         }
     }
+
+
+    /**
+     * 双指平移监听器 - 两个手指同时移动时，直接改变模型在世界空间的X、Y位置
+     *
+     * 设计说明：
+     * - 检测2个手指按下并移动
+     * - 计算双指中心点的移动距离
+     * - 设置阈值避免误触（轻微抖动不触发）
+     * - 直接修改模型矩阵的[12]和[13]（X和Y位置），Z保持不变
+     * - 不依赖摄像机朝向，方向与手指移动方向一致
+     */
+    inner class TwoFingerPanListener {
+
+        // 配置参数
+        private val thresholdPx = 8f           // 防误触阈值：像素距离，超过此值才开始响应
+        private val panSensitivity = 0.003f    // 平移灵敏度：屏幕像素到世界单位的比例
+
+        // 状态
+        private var isTwoFingerDown = false    // 是否处于双指按下状态
+        private var isPanning = false            // 是否正在执行平移（超过阈值）
+        private var lastCenterX = 0f           // 上一帧双指中心X
+        private var lastCenterY = 0f           // 上一帧双指中心Y
+        private var startCenterX = 0f          // 双指按下时的初始中心X（用于阈值判断）
+        private var startCenterY = 0f          // 双指按下时的初始中心Y（用于阈值判断）
+
+        fun onTouchEvent(event: MotionEvent): Boolean {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_POINTER_DOWN -> {
+                    // 第二个手指按下，进入双指模式
+                    if (event.pointerCount == 2) {
+                        isTwoFingerDown = true
+                        isPanning = false
+                        val center = calculateCenter(event)
+                        lastCenterX = center.first
+                        lastCenterY = center.second
+                        startCenterX = center.first
+                        startCenterY = center.second
+                        // 停止自动旋转
+                        setAutoRotate(false)
+                        return true
+                    }
+                }
+
+                MotionEvent.ACTION_MOVE -> {
+                    if (isTwoFingerDown && event.pointerCount == 2) {
+                        val center = calculateCenter(event)
+                        val currentCenterX = center.first
+                        val currentCenterY = center.second
+
+                        // 检查是否超过阈值
+                        if (!isPanning) {
+                            val dx = currentCenterX - startCenterX
+                            val dy = currentCenterY - startCenterY
+                            val distance = sqrt(dx * dx + dy * dy)
+                            if (distance >= thresholdPx) {
+                                isPanning = true
+                                // 超过阈值后，将lastCenter重置为当前位置，避免跳跃
+                                lastCenterX = currentCenterX
+                                lastCenterY = currentCenterY
+                            }
+                            return true
+                        }
+
+                        // 正在平移，计算移动差值
+                        val deltaX = currentCenterX - lastCenterX
+                        val deltaY = currentCenterY - lastCenterY
+
+                        // 应用平移
+                        applyPan(deltaX, deltaY)
+
+                        lastCenterX = currentCenterX
+                        lastCenterY = currentCenterY
+                        return true
+                    }
+                }
+
+                MotionEvent.ACTION_POINTER_UP -> {
+                    // 一个手指抬起，退出双指模式
+                    if (event.pointerCount == 2) {
+                        isTwoFingerDown = false
+                        isPanning = false
+                    }
+                }
+
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    // 所有手指抬起，重置状态
+                    isTwoFingerDown = false
+                    isPanning = false
+                }
+            }
+            return false
+        }
+
+        /**
+         * 计算双指中心点坐标
+         */
+        private fun calculateCenter(event: MotionEvent): Pair<Float, Float> {
+            val x1 = event.getX(0)
+            val y1 = event.getY(0)
+            val x2 = event.getX(1)
+            val y2 = event.getY(1)
+            return Pair((x1 + x2) / 2f, (y1 + y2) / 2f)
+        }
+
+        /**
+         * 应用平移：直接修改模型矩阵的X、Y位置
+         *
+         * 逻辑：
+         * - 屏幕X右移 → 模型X增加（向右移动）
+         * - 屏幕Y下移 → 模型Y减少（向下移动，因为屏幕Y向下为正，世界Y向上为正）
+         * - Z坐标保持不变
+         * - 不依赖摄像机朝向，直接操作矩阵
+         */
+        private fun applyPan(deltaScreenX: Float, deltaScreenY: Float) {
+            modelViewer.asset?.root?.let { root ->
+                val tm = modelViewer.engine.transformManager
+                val instance = tm.getInstance(root)
+                if (instance == 0) return
+
+                // 1. 获取当前矩阵
+                val currentMatrix = FloatArray(16)
+                tm.getTransform(instance, currentMatrix)
+
+                // 2. 直接修改X和Y位置
+                // 屏幕X右移 → 世界X正方向（同向）
+                // 屏幕Y下移 → 世界Y负方向（反向，因为屏幕Y轴向下）
+                currentMatrix[12] += deltaScreenX * panSensitivity
+                currentMatrix[13] -= deltaScreenY * panSensitivity
+                // Z坐标[14]保持不变
+
+                // 3. 应用新矩阵
+                tm.setTransform(instance, currentMatrix)
+            }
+        }
+    }
+
 }
