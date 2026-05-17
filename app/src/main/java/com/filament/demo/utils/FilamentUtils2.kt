@@ -136,9 +136,6 @@ class FilamentUtils2(
         modelViewer
         //设置光照
         setFollowLight()
-        //设置定义缩放
-        applyScaleToModel(0.5f)
-
     }
 
     private var followLightEntity: Int = 0
@@ -404,24 +401,6 @@ class FilamentUtils2(
 
                 tm.setTransform(instance, modelMatrix)
             }
-        }
-    }
-
-    /**
-     * 自定义缩放
-     */
-    private fun applyScaleToModel(scale: Float) {
-        modelViewer.asset?.root?.let { root ->
-            val tm = engine.transformManager
-            val instance = tm.getInstance(root)
-
-            // 获取当前变换矩阵
-            val transform = FloatArray(16)
-            tm.getTransform(instance, transform)
-
-            // 应用缩放
-            Matrix.scaleM(transform, 0, scale, scale, scale)
-            tm.setTransform(instance, transform)
         }
     }
 }
