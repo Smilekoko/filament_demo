@@ -3,6 +3,7 @@ package com.filament.demo.utils
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.PixelFormat
+import android.opengl.Matrix
 import android.view.Choreographer
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -40,9 +41,11 @@ class FilamentUtils2(
 
     private val viewerContent = AutomationEngine.ViewerContent() // 查看器内容容器
     private lateinit var cameraManipulator: Manipulator
+    private lateinit var engine: Engine
 
     fun initModelViewer() {
         //这个是默认的ModelViewer构造,因为外部可能需要ModelViewer的manipulator,所以复制了一份
+        engine = Engine.create()
         val targetPosition = Float3(0.0f, 0.0f, -4.0f)
         cameraManipulator = Manipulator.Builder()
             .targetPosition(targetPosition.x, targetPosition.y, targetPosition.z)
@@ -51,7 +54,7 @@ class FilamentUtils2(
         // 初始化模型查看器
         modelViewer = ModelViewer(
             surfaceView,
-            engine = Engine.create(),
+            engine = engine,
             uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
             manipulator = cameraManipulator
         )
@@ -133,6 +136,9 @@ class FilamentUtils2(
         modelViewer
         //设置光照
         setFollowLight()
+        //设置定义缩放
+        applyScaleToModel(0.5f)
+
     }
 
     private var followLightEntity: Int = 0
@@ -398,6 +404,24 @@ class FilamentUtils2(
 
                 tm.setTransform(instance, modelMatrix)
             }
+        }
+    }
+
+    /**
+     * 自定义缩放
+     */
+    private fun applyScaleToModel(scale: Float) {
+        modelViewer.asset?.root?.let { root ->
+            val tm = engine.transformManager
+            val instance = tm.getInstance(root)
+
+            // 获取当前变换矩阵
+            val transform = FloatArray(16)
+            tm.getTransform(instance, transform)
+
+            // 应用缩放
+            Matrix.scaleM(transform, 0, scale, scale, scale)
+            tm.setTransform(instance, transform)
         }
     }
 }
