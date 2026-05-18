@@ -31,7 +31,7 @@ class OfficeActivity : AppCompatActivity() {
 
         if (useLocal) {
             lifecycleScope.launch(Dispatchers.IO) {
-                var fileName = "models/helmet.glb"
+                var fileName = "models/wawa.glb"
                 assets.open(fileName).use { input ->
                     val bytes = ByteArray(input.available())
                     input.read(bytes)

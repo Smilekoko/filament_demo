@@ -325,7 +325,6 @@ class FilamentUtils2(
             updateModelRotation()
             return true
         }
-
         private fun updateModelRotation() {
             modelViewer.asset?.root?.let { root ->
                 val tm = modelViewer.engine.transformManager
@@ -334,21 +333,51 @@ class FilamentUtils2(
 
                 val currentMatrix = FloatArray(16)
                 tm.getTransform(instance, currentMatrix)
+
+                // 提取位置
                 val posX = currentMatrix[12]
                 val posY = currentMatrix[13]
                 val posZ = currentMatrix[14]
 
-                val newMatrix = FloatArray(16)
-                Matrix.setIdentityM(newMatrix, 0)
+                // 提取缩放（各轴的长度）
+                val scaleX = sqrt(
+                    currentMatrix[0] * currentMatrix[0] +
+                            currentMatrix[1] * currentMatrix[1] +
+                            currentMatrix[2] * currentMatrix[2]
+                )
+                val scaleY = sqrt(
+                    currentMatrix[4] * currentMatrix[4] +
+                            currentMatrix[5] * currentMatrix[5] +
+                            currentMatrix[6] * currentMatrix[6]
+                )
+                val scaleZ = sqrt(
+                    currentMatrix[8] * currentMatrix[8] +
+                            currentMatrix[9] * currentMatrix[9] +
+                            currentMatrix[10] * currentMatrix[10]
+                )
 
+                // 构造旋转矩阵（注意：绕 X 和 Y 轴旋转的顺序与自动旋转保持一致）
                 val rotX = FloatArray(16)
                 val rotY = FloatArray(16)
                 val rotComposite = FloatArray(16)
                 Matrix.setRotateM(rotX, 0, userPitchAngle, 1f, 0f, 0f)
                 Matrix.setRotateM(rotY, 0, userRotationAngle, 0f, 1f, 0f)
                 Matrix.multiplyMM(rotComposite, 0, rotY, 0, rotX, 0)
-                Matrix.multiplyMM(newMatrix, 0, rotComposite, 0, newMatrix, 0)
 
+                // 组合缩放、旋转、平移
+                val newMatrix = FloatArray(16)
+                Matrix.setIdentityM(newMatrix, 0)
+                // 应用缩放
+                newMatrix[0] = rotComposite[0] * scaleX
+                newMatrix[1] = rotComposite[1] * scaleX
+                newMatrix[2] = rotComposite[2] * scaleX
+                newMatrix[4] = rotComposite[4] * scaleY
+                newMatrix[5] = rotComposite[5] * scaleY
+                newMatrix[6] = rotComposite[6] * scaleY
+                newMatrix[8] = rotComposite[8] * scaleZ
+                newMatrix[9] = rotComposite[9] * scaleZ
+                newMatrix[10] = rotComposite[10] * scaleZ
+                // 设置位置
                 newMatrix[12] = posX
                 newMatrix[13] = posY
                 newMatrix[14] = posZ
