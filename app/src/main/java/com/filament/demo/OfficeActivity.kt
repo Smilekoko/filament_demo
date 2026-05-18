@@ -37,6 +37,7 @@ class OfficeActivity : AppCompatActivity() {
                     input.read(bytes)
                     withContext(Dispatchers.Main) {
                         filamentUtils?.loadModelGlb(bytes)
+                        filamentUtils?.initModelPosition(1f)
                         filamentUtils?.setSurfaceViewEvent()
                         filamentUtils?.startRendering()
 

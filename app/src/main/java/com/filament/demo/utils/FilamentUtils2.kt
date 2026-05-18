@@ -130,7 +130,8 @@ class FilamentUtils2(
                                 val (cx, cy) = getPointerCenter(event)
                                 val panDeltaX = cx - initialCenterX
                                 val panDeltaY = cy - initialCenterY
-                                val panDistance = sqrt(panDeltaX * panDeltaX + panDeltaY * panDeltaY)
+                                val panDistance =
+                                    sqrt(panDeltaX * panDeltaX + panDeltaY * panDeltaY)
 
                                 if (scaleDelta > scaleTriggerThreshold) {
                                     currentMode = GestureMode.SCALE
@@ -262,7 +263,6 @@ class FilamentUtils2(
     fun loadModelGlb(byteArray: ByteArray) {
         modelViewer.loadModelGlb(ByteBuffer.wrap(byteArray))
         modelViewer.transformToUnitCube()
-        initModelPosition(distanceFactor = 1.5f)
         setFollowLight()
     }
 
@@ -309,7 +309,12 @@ class FilamentUtils2(
 
         override fun onDown(e: MotionEvent): Boolean = true
 
-        override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+        override fun onScroll(
+            e1: MotionEvent?,
+            e2: MotionEvent,
+            distanceX: Float,
+            distanceY: Float
+        ): Boolean {
             val deltaAngleY = -distanceX / surfaceView.width * 360f * 0.5f
             userRotationAngle = (userRotationAngle + deltaAngleY) % 360f
             if (userRotationAngle < 0) userRotationAngle += 360f
@@ -325,6 +330,7 @@ class FilamentUtils2(
             updateModelRotation()
             return true
         }
+
         private fun updateModelRotation() {
             modelViewer.asset?.root?.let { root ->
                 val tm = modelViewer.engine.transformManager
@@ -417,7 +423,10 @@ class FilamentUtils2(
         transformManager.setTransform(transformInstance, newMatrix)
     }
 
-    fun initModelPosition(distanceFactor: Float = 1.0f) {
+    private var currentDistanceFactor: Float = 1.0f
+
+    fun initModelPosition(distanceFactor: Float) {
+        currentDistanceFactor=distanceFactor
         modelViewer.asset?.root?.let { root ->
             val tm = modelViewer.engine.transformManager
             val instance = tm.getInstance(root)
@@ -442,7 +451,7 @@ class FilamentUtils2(
             val (nx, ny, nz) = if (length < 0.0001f) Triple(0f, 0f, -1f)
             else Triple(dirX / length, dirY / length, dirZ / length)
 
-            val baseDistance = 3.0f * distanceFactor
+            val baseDistance = 2.0f * distanceFactor
             modelMatrix[12] = modelPos[0] + nx * baseDistance
             modelMatrix[13] = modelPos[1] + ny * baseDistance
             modelMatrix[14] = modelPos[2] + nz * baseDistance
@@ -561,7 +570,7 @@ class FilamentUtils2(
         modelViewer.transformToUnitCube()
 
         // 3. 重新设置模型位置（距离摄像机 1.5 倍标准距离）
-        initModelPosition(distanceFactor = 1.5f)
+        initModelPosition(currentDistanceFactor)
 
         // 4. 重置用户旋转角度累积
         userRotationAngle = 0f
