@@ -425,6 +425,10 @@ class FilamentUtils2(
 
     private var currentDistanceFactor: Float = 1.0f
 
+    /**
+     * 设置模型的距离摄像机的位置,只要设置值就好远离摄像机
+     * @param distanceFactor 正值表示模型远离摄像机模型显示变小，负值表示模型靠近摄像机模型变大
+     */
     fun initModelPosition(distanceFactor: Float) {
         currentDistanceFactor=distanceFactor
         modelViewer.asset?.root?.let { root ->
