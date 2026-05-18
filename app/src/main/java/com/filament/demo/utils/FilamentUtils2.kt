@@ -431,7 +431,7 @@ class FilamentUtils2(
      * @param distanceFactor 正值表示模型远离摄像机模型显示变小，负值表示模型靠近摄像机模型变大
      * @param offsetY Y 轴偏移量，正值向上移动，负值向下移动
      */
-    fun initModelPosition(distanceFactor: Float, offsetY: Float = 0f) {
+    fun initModelPosition(distanceFactor: Float, offsetY: Float) {
         currentDistanceFactor = distanceFactor
         currentOffsetY = offsetY
         modelViewer.asset?.root?.let { root ->
