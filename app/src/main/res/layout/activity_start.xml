@@ -27,6 +27,6 @@
         android:id="@+id/button_3"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="TextureView模式"
+        android:text="TextureView官方示例"
         android:textAllCaps="false" />
 </LinearLayout>

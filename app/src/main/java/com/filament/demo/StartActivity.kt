@@ -27,7 +27,7 @@ class StartActivity : AppCompatActivity() {
             startActivity(Intent(this, OfficeActivity::class.java))
         }
         binding.button3.setOnClickListener {
-            startActivity(Intent(this, TextureViewActivity::class.java))
+            startActivity(Intent(this, MyTextureViewActivity::class.java))
         }
     }
 }
