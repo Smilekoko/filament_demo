@@ -14,11 +14,19 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="80dp"
-        android:text="官方sample-gltf-view" />
+        android:text="官方sample-gltf-view"
+        android:textAllCaps="false" />
 
     <Button
         android:id="@+id/button_2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="官方工具加载模型" />
+
+    <Button
+        android:id="@+id/button_3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="TextureView模式"
+        android:textAllCaps="false" />
 </LinearLayout>

@@ -14,6 +14,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Filament_demo">
         <activity
+            android:name=".TextureViewActivity"
+            android:exported="false" />
+        <activity
             android:name=".OfficeActivity"
             android:exported="false" />
         <activity
