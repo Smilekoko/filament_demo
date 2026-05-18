@@ -424,13 +424,16 @@ class FilamentUtils2(
     }
 
     private var currentDistanceFactor: Float = 1.0f
+    private var currentOffsetY: Float = 0f
 
     /**
-     * 设置模型的距离摄像机的位置,只要设置值就好远离摄像机
+     * 设置模型的位置（距离摄像机的距离，以及 Y 轴偏移）
      * @param distanceFactor 正值表示模型远离摄像机模型显示变小，负值表示模型靠近摄像机模型变大
+     * @param offsetY Y 轴偏移量，正值向上移动，负值向下移动
      */
-    fun initModelPosition(distanceFactor: Float) {
-        currentDistanceFactor=distanceFactor
+    fun initModelPosition(distanceFactor: Float, offsetY: Float = 0f) {
+        currentDistanceFactor = distanceFactor
+        currentOffsetY = offsetY
         modelViewer.asset?.root?.let { root ->
             val tm = modelViewer.engine.transformManager
             val instance = tm.getInstance(root)
@@ -455,10 +458,13 @@ class FilamentUtils2(
             val (nx, ny, nz) = if (length < 0.0001f) Triple(0f, 0f, -1f)
             else Triple(dirX / length, dirY / length, dirZ / length)
 
-            val baseDistance = 2.0f * distanceFactor
+            val baseDistance = 2f * distanceFactor
             modelMatrix[12] = modelPos[0] + nx * baseDistance
             modelMatrix[13] = modelPos[1] + ny * baseDistance
             modelMatrix[14] = modelPos[2] + nz * baseDistance
+
+            // 应用 Y 轴偏移（世界坐标系）
+            modelMatrix[13] += offsetY
 
             tm.setTransform(instance, modelMatrix)
         }
@@ -574,7 +580,7 @@ class FilamentUtils2(
         modelViewer.transformToUnitCube()
 
         // 3. 重新设置模型位置（距离摄像机 1.5 倍标准距离）
-        initModelPosition(currentDistanceFactor)
+        initModelPosition(currentDistanceFactor,currentOffsetY)
 
         // 4. 重置用户旋转角度累积
         userRotationAngle = 0f
