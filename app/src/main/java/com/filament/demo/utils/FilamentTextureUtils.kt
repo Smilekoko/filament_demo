@@ -269,6 +269,9 @@ class FilamentTextureUtils(
     private var followLightInstance: Int = 0
     private fun setFollowLight() {
         modelViewer.let {
+            //禁用默认光源，完全使用自定义的光源。
+            modelViewer.scene.removeEntities(intArrayOf(modelViewer.light))
+
             val mainEntity = EntityManager.get().create()
             LightManager.Builder(LightManager.Type.SUN)
                 .direction(0f, 0f, 0f)
