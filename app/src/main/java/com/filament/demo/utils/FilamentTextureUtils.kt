@@ -2,12 +2,10 @@ package com.filament.demo.utils
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.PixelFormat
-import android.opengl.Matrix
 import android.view.Choreographer
 import android.view.GestureDetector
 import android.view.MotionEvent
-import android.view.SurfaceView
+import android.view.TextureView
 import android.widget.Toast
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
@@ -23,9 +21,9 @@ import com.google.android.filament.utils.Utils
 import java.nio.ByteBuffer
 import kotlin.math.sqrt
 
-class FilamentUtils2(
+class FilamentTextureUtils(
     val context: Context,
-    val surfaceView: SurfaceView
+    val textureView: TextureView
 ) {
     init {
         Utils.init()
@@ -59,10 +57,12 @@ class FilamentUtils2(
         val targetPosition = Float3(0.0f, 0.0f, -4.0f)
         cameraManipulator = Manipulator.Builder()
             .targetPosition(targetPosition.x, targetPosition.y, targetPosition.z)
-            .viewport(surfaceView.width, surfaceView.height)
+            .viewport(textureView.width, textureView.height)
             .build(Manipulator.Mode.ORBIT)
+
+        // 核心修改：传入 textureView，ModelViewer 内部会自动处理其 SurfaceTexture 监听
         modelViewer = ModelViewer(
-            surfaceView,
+            textureView,
             engine = engine,
             uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
             manipulator = cameraManipulator
@@ -81,13 +81,14 @@ class FilamentUtils2(
                 discard = false
             }
         }
+
+        // 核心修改：设置 TextureView 透明背景的全套配置
+        textureView.isOpaque = false
         modelViewer.view.blendMode = View.BlendMode.TRANSLUCENT
-        surfaceView.holder.setFormat(PixelFormat.TRANSPARENT)
-        surfaceView.setZOrderOnTop(true)
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    fun setSurfaceViewEvent() {
+    fun setTextureViewEvent() {
         val doubleTapListener = DoubleTapListener()
         val singleTapListener = SingleTapListener()
         val scrollListener = ScrollRotationListener()
@@ -96,7 +97,7 @@ class FilamentUtils2(
         val singleTapDetector = GestureDetector(context, singleTapListener)
         val scrollDetector = GestureDetector(context, scrollListener)
 
-        surfaceView.setOnTouchListener { _, event ->
+        textureView.setOnTouchListener { _, event ->
             val pointerCount = event.pointerCount
 
             when (event.actionMasked) {
@@ -244,17 +245,16 @@ class FilamentUtils2(
         }
     }
 
-    // 以下为原有其他方法（未修改，保持完整）
     inner class DoubleTapListener : GestureDetector.SimpleOnGestureListener() {
         override fun onDoubleTap(e: MotionEvent): Boolean {
-            Toast.makeText(surfaceView.context, "双击", Toast.LENGTH_SHORT).show()
+            Toast.makeText(textureView.context, "双击", Toast.LENGTH_SHORT).show()
             return super.onDoubleTap(e)
         }
     }
 
     inner class SingleTapListener : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapUp(event: MotionEvent): Boolean {
-            Toast.makeText(surfaceView.context, "单击", Toast.LENGTH_SHORT).show()
+            Toast.makeText(textureView.context, "单击", Toast.LENGTH_SHORT).show()
             return super.onSingleTapUp(event)
         }
     }
@@ -300,11 +300,21 @@ class FilamentUtils2(
         choreographer.removeFrameCallback(frameScheduler)
     }
 
+    // 资源释放
+    fun destroy() {
+        stopRendering()
+        if (followLightEntity != 0) {
+            engine.lightManager.destroy(followLightEntity)
+            EntityManager.get().destroy(followLightEntity)
+        }
+        // 释放引擎资源
+        engine.destroy()
+    }
+
     private var userPitchAngle = 0f
     private var userRotationAngle = 0f
 
     inner class ScrollRotationListener : GestureDetector.SimpleOnGestureListener() {
-
 
         override fun onDown(e: MotionEvent): Boolean = true
 
@@ -314,11 +324,11 @@ class FilamentUtils2(
             distanceX: Float,
             distanceY: Float
         ): Boolean {
-            val deltaAngleY = -distanceX / surfaceView.width * 360f * 0.5f
+            val deltaAngleY = -distanceX / textureView.width * 360f * 0.5f
             userRotationAngle = (userRotationAngle + deltaAngleY) % 360f
             if (userRotationAngle < 0) userRotationAngle += 360f
 
-            val deltaAngleX = -distanceY / surfaceView.height * 360f * 0.5f
+            val deltaAngleX = -distanceY / textureView.height * 360f * 0.5f
             userPitchAngle = (userPitchAngle + deltaAngleX) % 360f
             if (userPitchAngle < 0) userPitchAngle += 360f
 
@@ -339,12 +349,10 @@ class FilamentUtils2(
                 val currentMatrix = FloatArray(16)
                 tm.getTransform(instance, currentMatrix)
 
-                // 提取位置
                 val posX = currentMatrix[12]
                 val posY = currentMatrix[13]
                 val posZ = currentMatrix[14]
 
-                // 提取缩放（各轴的长度）
                 val scaleX = sqrt(
                     currentMatrix[0] * currentMatrix[0] +
                             currentMatrix[1] * currentMatrix[1] +
@@ -361,18 +369,16 @@ class FilamentUtils2(
                             currentMatrix[10] * currentMatrix[10]
                 )
 
-                // 构造旋转矩阵（注意：绕 X 和 Y 轴旋转的顺序与自动旋转保持一致）
                 val rotX = FloatArray(16)
                 val rotY = FloatArray(16)
                 val rotComposite = FloatArray(16)
-                Matrix.setRotateM(rotX, 0, userPitchAngle, 1f, 0f, 0f)
-                Matrix.setRotateM(rotY, 0, userRotationAngle, 0f, 1f, 0f)
-                Matrix.multiplyMM(rotComposite, 0, rotY, 0, rotX, 0)
+                android.opengl.Matrix.setRotateM(rotX, 0, userPitchAngle, 1f, 0f, 0f)
+                android.opengl.Matrix.setRotateM(rotY, 0, userRotationAngle, 0f, 1f, 0f)
+                android.opengl.Matrix.multiplyMM(rotComposite, 0, rotY, 0, rotX, 0)
 
-                // 组合缩放、旋转、平移
                 val newMatrix = FloatArray(16)
-                Matrix.setIdentityM(newMatrix, 0)
-                // 应用缩放
+                android.opengl.Matrix.setIdentityM(newMatrix, 0)
+
                 newMatrix[0] = rotComposite[0] * scaleX
                 newMatrix[1] = rotComposite[1] * scaleX
                 newMatrix[2] = rotComposite[2] * scaleX
@@ -382,7 +388,7 @@ class FilamentUtils2(
                 newMatrix[8] = rotComposite[8] * scaleZ
                 newMatrix[9] = rotComposite[9] * scaleZ
                 newMatrix[10] = rotComposite[10] * scaleZ
-                // 设置位置
+
                 newMatrix[12] = posX
                 newMatrix[13] = posY
                 newMatrix[14] = posZ
@@ -400,10 +406,10 @@ class FilamentUtils2(
         val currentMatrix = FloatArray(16)
         transformManager.getTransform(transformInstance, currentMatrix)
         val rotMatrix = FloatArray(16)
-        Matrix.setIdentityM(rotMatrix, 0)
-        Matrix.rotateM(rotMatrix, 0, -90f, 1f, 0f, 0f)
+        android.opengl.Matrix.setIdentityM(rotMatrix, 0)
+        android.opengl.Matrix.rotateM(rotMatrix, 0, -90f, 1f, 0f, 0f)
         val newMatrix = FloatArray(16)
-        Matrix.multiplyMM(newMatrix, 0, currentMatrix, 0, rotMatrix, 0)
+        android.opengl.Matrix.multiplyMM(newMatrix, 0, currentMatrix, 0, rotMatrix, 0)
         transformManager.setTransform(transformInstance, newMatrix)
     }
 
@@ -415,21 +421,16 @@ class FilamentUtils2(
         val currentMatrix = FloatArray(16)
         transformManager.getTransform(transformInstance, currentMatrix)
         val rotMatrix = FloatArray(16)
-        Matrix.setIdentityM(rotMatrix, 0)
-        Matrix.rotateM(rotMatrix, 0, 30f, 1f, 0f, 0f)
+        android.opengl.Matrix.setIdentityM(rotMatrix, 0)
+        android.opengl.Matrix.rotateM(rotMatrix, 0, 30f, 1f, 0f, 0f)
         val newMatrix = FloatArray(16)
-        Matrix.multiplyMM(newMatrix, 0, currentMatrix, 0, rotMatrix, 0)
+        android.opengl.Matrix.multiplyMM(newMatrix, 0, currentMatrix, 0, rotMatrix, 0)
         transformManager.setTransform(transformInstance, newMatrix)
     }
 
     private var currentDistanceFactor: Float = 1.0f
     private var currentOffsetY: Float = 0f
 
-    /**
-     * 设置模型的位置（距离摄像机的距离，以及 Y 轴偏移）
-     * @param distanceFactor 正值表示模型远离摄像机模型显示变小，负值表示模型靠近摄像机模型变大
-     * @param offsetY Y 轴偏移量，正值向上移动，负值向下移动
-     */
     fun initModelPosition(distanceFactor: Float, offsetY: Float = 0f) {
         currentDistanceFactor = distanceFactor
         currentOffsetY = offsetY
@@ -462,7 +463,6 @@ class FilamentUtils2(
             modelMatrix[13] = modelPos[1] + ny * baseDistance
             modelMatrix[14] = modelPos[2] + nz * baseDistance
 
-            // 应用 Y 轴偏移（世界坐标系）
             modelMatrix[13] += offsetY
 
             tm.setTransform(instance, modelMatrix)
@@ -514,7 +514,7 @@ class FilamentUtils2(
             )
 
             val rotationMatrix = FloatArray(16)
-            Matrix.setIdentityM(rotationMatrix, 0)
+            android.opengl.Matrix.setIdentityM(rotationMatrix, 0)
             val rad = Math.toRadians(autoRotateAngle.toDouble()).toFloat()
             val cos = kotlin.math.cos(rad)
             val sin = kotlin.math.sin(rad)
@@ -556,36 +556,22 @@ class FilamentUtils2(
         }
     }
 
-    /**
-     * 恢复模型的初始状态：
-     * - 位置重置为 initModelPosition 时的位置（距离摄像机 1.5 倍标准距离）
-     * - 缩放重置为 transformToUnitCube 后的归一化大小
-     * - 旋转角度清零（模型朝向初始方向）
-     * - 停止自动旋转，重置自转角度累积
-     */
     fun resetModelTransform() {
         modelViewer.asset?.root?.let { root ->
             val tm = modelViewer.engine.transformManager
             val instance = tm.getInstance(root)
             if (instance == 0) return
 
-            // 1. 重置变换矩阵为单位矩阵（清除所有旋转、缩放、位移）
             val identity = FloatArray(16)
             android.opengl.Matrix.setIdentityM(identity, 0)
             tm.setTransform(instance, identity)
         }
 
-        // 2. 重新归一化模型尺寸（确保模型大小为单位立方体）
         modelViewer.transformToUnitCube()
+        initModelPosition(currentDistanceFactor, currentOffsetY)
 
-        // 3. 重新设置模型位置（距离摄像机 1.5 倍标准距离）
-        initModelPosition(currentDistanceFactor,currentOffsetY)
-
-        // 4. 重置用户旋转角度累积
         userRotationAngle = 0f
         userPitchAngle = 0f
-
-        // 5. 重置自动旋转状态
         autoRotateAngle = 0f
         setAutoRotate(true)
     }
