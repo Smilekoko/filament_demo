@@ -14,6 +14,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Filament_demo">
         <activity
+            android:name=".FilamentCenterFixActivity"
+            android:exported="false" />
+        <activity
             android:name=".MyTextureViewActivity2"
             android:exported="false" />
         <activity

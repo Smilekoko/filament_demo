@@ -29,5 +29,9 @@ class StartActivity : AppCompatActivity() {
         binding.button3.setOnClickListener {
             startActivity(Intent(this, MyTextureViewActivity2::class.java))
         }
+        binding.button4.setOnClickListener {
+            startActivity(Intent(this, FilamentCenterFixActivity::class.java))
+        }
+
     }
 }
