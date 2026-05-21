@@ -321,7 +321,6 @@ class FilamentUtils3(
     inner class ScrollRotationListener : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent): Boolean {
             // 核心修改 2：针对单指滑动的核心兼容拦截
-            // 如果手势触发时正在自动旋转，在此处立刻继承角度并停止自动旋转，确保顺滑接管
             if (isAutoRotating) {
                 setAutoRotate(false)
                 userRotationAngle = autoRotateAngle
@@ -330,13 +329,35 @@ class FilamentUtils3(
         }
 
         override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
-            // 核心修改 3：因为在 onDown / ACTION_DOWN 中已经对 userRotationAngle 进行了继承重置
-            // 此处直接基于被继承的角度进行滑动增量累加，彻底去掉了以前的 `userRotationAngle = -autoRotateAngle` 符号反转逻辑
-            val deltaAngleY = -distanceX / textureView.width * 360f * 0.5f
+            val absX = Math.abs(distanceX)
+            val absY = Math.abs(distanceY)
+
+            // 动态计算本次滑动的分配权重
+            var factorX = 1.0f
+            var factorY = 1.0f
+
+            if (absX > absY * 2.0f) {
+                // 如果横向位移绝对大于纵向的 2 倍，判定用户意图为【绝对水平滑动】
+                // 彻底斩断垂直方向的无意识微小抖动
+                factorY = 0f
+            } else if (absY > absX * 2.0f) {
+                // 同理，如果纵向位移绝对大于横向的 2 倍，判定意图为【绝对垂直滑动】
+                factorX = 0f
+            } else {
+                // 如果处于斜向滑动的模糊地带，对较弱的方向进行平滑抑制（降权）
+                if (absX > absY) {
+                    factorY = absY / absX * 0.5f // 横向强，纵向被抑制
+                } else if (absY > absX && absY > 0f) {
+                    factorX = absX / absY * 0.5f // 纵向强，横向被抑制
+                }
+            }
+
+            // 应用带有权重抑制后的增量
+            val deltaAngleY = -(distanceX * factorX) / textureView.width * 360f * 0.5f
             userRotationAngle = (userRotationAngle + deltaAngleY) % 360f
             if (userRotationAngle < 0) userRotationAngle += 360f
 
-            val deltaAngleX = -distanceY / textureView.height * 360f * 0.5f
+            val deltaAngleX = -(distanceY * factorY) / textureView.height * 360f * 0.5f
             userPitchAngle = (userPitchAngle + deltaAngleX) % 360f
             if (userPitchAngle < 0) userPitchAngle += 360f
 
