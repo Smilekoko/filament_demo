@@ -66,6 +66,6 @@ class MyTextureViewActivity2 : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         // 记得在这里释放全部的 Filament 资源，防止内存泄漏
-        filamentUtils?.destroy()
+        filamentUtils?.release()
     }
 }

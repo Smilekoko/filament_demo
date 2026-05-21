@@ -2,11 +2,11 @@ package com.filament.demo.utils
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.opengl.Matrix
 import android.view.Choreographer
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.TextureView
-import android.widget.Toast
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.LightManager
@@ -19,6 +19,9 @@ import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
 import java.nio.ByteBuffer
+import kotlin.math.cos
+import kotlin.math.ln
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 class FilamentTextureUtils(
@@ -51,8 +54,10 @@ class FilamentTextureUtils(
     // 优化后的阈值（平移更易触发，缩放更难误触）
     private val scaleTriggerThreshold = 0.02f   // 距离比例变化 >2% 才触发缩放
     private val panTriggerThreshold = 8f        // 中心点移动 >8 像素即触发平移
+    private lateinit var uiHelper: UiHelper
 
     fun initModelViewer() {
+        uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
         engine = Engine.create()
         val targetPosition = Float3(0.0f, 0.0f, -4.0f)
         cameraManipulator = Manipulator.Builder()
@@ -64,7 +69,7 @@ class FilamentTextureUtils(
         modelViewer = ModelViewer(
             textureView,
             engine = engine,
-            uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
+            uiHelper =uiHelper,
             manipulator = cameraManipulator
         )
 
@@ -148,7 +153,7 @@ class FilamentTextureUtils(
                                 val currentDistance = getPointerDistance(event)
                                 if (currentDistance > 0.01f && lastDistance > 0.01f) {
                                     val scaleFactor = currentDistance / lastDistance
-                                    val delta = kotlin.math.ln(scaleFactor) * 0.8f
+                                    val delta = ln(scaleFactor) * 0.8f
                                     moveModelTowardCamera(delta)
                                 }
                                 lastDistance = currentDistance
@@ -247,14 +252,17 @@ class FilamentTextureUtils(
 
     inner class DoubleTapListener : GestureDetector.SimpleOnGestureListener() {
         override fun onDoubleTap(e: MotionEvent): Boolean {
-            Toast.makeText(textureView.context, "双击", Toast.LENGTH_SHORT).show()
+//            Toast.makeText(textureView.context, "双击", Toast.LENGTH_SHORT).show()
             return super.onDoubleTap(e)
         }
     }
 
+    var onSingleClick: () -> Unit = {}
+
     inner class SingleTapListener : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapUp(event: MotionEvent): Boolean {
-            Toast.makeText(textureView.context, "单击", Toast.LENGTH_SHORT).show()
+//            Toast.makeText(textureView.context, "单击", Toast.LENGTH_SHORT).show()
+            onSingleClick.invoke()
             return super.onSingleTapUp(event)
         }
     }
@@ -296,22 +304,46 @@ class FilamentTextureUtils(
     }
 
     fun startRendering() {
-        choreographer.postFrameCallback(frameScheduler)
+        if (::modelViewer.isInitialized) {
+            choreographer.postFrameCallback(frameScheduler)
+        }
     }
 
     fun stopRendering() {
-        choreographer.removeFrameCallback(frameScheduler)
+        if (::modelViewer.isInitialized) {
+            choreographer.removeFrameCallback(frameScheduler)
+        }
     }
 
     // 资源释放
-    fun destroy() {
+    fun release() {
         stopRendering()
-        if (followLightEntity != 0) {
-            engine.lightManager.destroy(followLightEntity)
-            EntityManager.get().destroy(followLightEntity)
+        if (::modelViewer.isInitialized) {
+            if (followLightEntity != 0) {
+                try {
+                    modelViewer.scene.remove(followLightEntity)
+                    engine.destroyEntity(followLightEntity)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            modelViewer.let {
+                try {
+                    it.scene.entities.forEach { en ->
+                        engine.destroyEntity(en)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            try {
+                uiHelper.detach()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
-        // 释放引擎资源
-        engine.destroy()
     }
 
     private var userPitchAngle = 0f
@@ -375,12 +407,12 @@ class FilamentTextureUtils(
                 val rotX = FloatArray(16)
                 val rotY = FloatArray(16)
                 val rotComposite = FloatArray(16)
-                android.opengl.Matrix.setRotateM(rotX, 0, userPitchAngle, 1f, 0f, 0f)
-                android.opengl.Matrix.setRotateM(rotY, 0, userRotationAngle, 0f, 1f, 0f)
-                android.opengl.Matrix.multiplyMM(rotComposite, 0, rotY, 0, rotX, 0)
+                Matrix.setRotateM(rotX, 0, userPitchAngle, 1f, 0f, 0f)
+                Matrix.setRotateM(rotY, 0, userRotationAngle, 0f, 1f, 0f)
+                Matrix.multiplyMM(rotComposite, 0, rotY, 0, rotX, 0)
 
                 val newMatrix = FloatArray(16)
-                android.opengl.Matrix.setIdentityM(newMatrix, 0)
+                Matrix.setIdentityM(newMatrix, 0)
 
                 newMatrix[0] = rotComposite[0] * scaleX
                 newMatrix[1] = rotComposite[1] * scaleX
@@ -409,10 +441,10 @@ class FilamentTextureUtils(
         val currentMatrix = FloatArray(16)
         transformManager.getTransform(transformInstance, currentMatrix)
         val rotMatrix = FloatArray(16)
-        android.opengl.Matrix.setIdentityM(rotMatrix, 0)
-        android.opengl.Matrix.rotateM(rotMatrix, 0, -90f, 1f, 0f, 0f)
+        Matrix.setIdentityM(rotMatrix, 0)
+        Matrix.rotateM(rotMatrix, 0, -90f, 1f, 0f, 0f)
         val newMatrix = FloatArray(16)
-        android.opengl.Matrix.multiplyMM(newMatrix, 0, currentMatrix, 0, rotMatrix, 0)
+        Matrix.multiplyMM(newMatrix, 0, currentMatrix, 0, rotMatrix, 0)
         transformManager.setTransform(transformInstance, newMatrix)
     }
 
@@ -424,10 +456,10 @@ class FilamentTextureUtils(
         val currentMatrix = FloatArray(16)
         transformManager.getTransform(transformInstance, currentMatrix)
         val rotMatrix = FloatArray(16)
-        android.opengl.Matrix.setIdentityM(rotMatrix, 0)
-        android.opengl.Matrix.rotateM(rotMatrix, 0, 30f, 1f, 0f, 0f)
+        Matrix.setIdentityM(rotMatrix, 0)
+        Matrix.rotateM(rotMatrix, 0, 30f, 1f, 0f, 0f)
         val newMatrix = FloatArray(16)
-        android.opengl.Matrix.multiplyMM(newMatrix, 0, currentMatrix, 0, rotMatrix, 0)
+        Matrix.multiplyMM(newMatrix, 0, currentMatrix, 0, rotMatrix, 0)
         transformManager.setTransform(transformInstance, newMatrix)
     }
 
@@ -517,10 +549,10 @@ class FilamentTextureUtils(
             )
 
             val rotationMatrix = FloatArray(16)
-            android.opengl.Matrix.setIdentityM(rotationMatrix, 0)
+            Matrix.setIdentityM(rotationMatrix, 0)
             val rad = Math.toRadians(autoRotateAngle.toDouble()).toFloat()
-            val cos = kotlin.math.cos(rad)
-            val sin = kotlin.math.sin(rad)
+            val cos = cos(rad)
+            val sin = sin(rad)
 
             rotationMatrix[0] = cos * scaleX
             rotationMatrix[2] = sin * scaleZ
@@ -566,7 +598,7 @@ class FilamentTextureUtils(
             if (instance == 0) return
 
             val identity = FloatArray(16)
-            android.opengl.Matrix.setIdentityM(identity, 0)
+            Matrix.setIdentityM(identity, 0)
             tm.setTransform(instance, identity)
         }
 
