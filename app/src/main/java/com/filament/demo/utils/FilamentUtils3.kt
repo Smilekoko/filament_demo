@@ -19,12 +19,10 @@ import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
 import java.nio.ByteBuffer
-import kotlin.math.cos
 import kotlin.math.ln
-import kotlin.math.sin
 import kotlin.math.sqrt
 
-class FilamentCenterFixUtils(
+class FilamentUtils3(
     val context: Context,
     val textureView: TextureView
 ) {

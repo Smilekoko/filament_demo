@@ -1,15 +1,13 @@
 package com.filament.demo
 
 import android.os.Bundle
-import android.view.TextureView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.filament.demo.databinding.ActivityFilamentCenterFixBinding
-import com.filament.demo.utils.FilamentCenterFixUtils
-import com.filament.demo.utils.FilamentTextureUtils
+import com.filament.demo.utils.FilamentUtils3
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -17,7 +15,7 @@ import kotlinx.coroutines.withContext
 class FilamentCenterFixActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityFilamentCenterFixBinding
-    private var filamentUtils: FilamentCenterFixUtils? = null
+    private var filamentUtils: FilamentUtils3? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,7 +33,7 @@ class FilamentCenterFixActivity : AppCompatActivity() {
         }
 
         // 2. 传入对应的 TextureView 初始化 3D 渲染工具类
-        filamentUtils = FilamentCenterFixUtils(this, binding.textureView).apply {
+        filamentUtils = FilamentUtils3(this, binding.textureView).apply {
             initModelViewer()
             setTextureViewEvent()
         }
