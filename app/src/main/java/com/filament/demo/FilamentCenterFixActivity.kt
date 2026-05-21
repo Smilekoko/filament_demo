@@ -58,7 +58,7 @@ class FilamentCenterFixActivity : AppCompatActivity() {
                         filamentUtils?.let { utils ->
                             utils.loadModelGlb(bytes)
                             // 修正初始化姿态：距离系数 1.5倍，无Y轴额外偏移
-                            utils.initModelPosition(1.5f, 0f)
+                            utils.initModelPosition(2.5f, 0f)
                             // 设置自转速度并默认开启自传
                             utils.setAutoRotateSpeed(-20f)
                             utils.setAutoRotate(true)
